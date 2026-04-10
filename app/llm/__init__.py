@@ -1,5 +1,5 @@
 """LLM integrations."""
 
-from app.llm.client import mistral_client
+from app.llm.client import llm_client
 
-__all__ = ["mistral_client"]
+__all__ = ["llm_client"]

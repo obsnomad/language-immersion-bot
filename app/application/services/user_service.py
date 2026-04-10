@@ -15,6 +15,11 @@ class UserService:
             user = result.scalar_one_or_none()
 
             if user:
+                if user.username != username or user.first_name != first_name:
+                    user.username = username
+                    user.first_name = first_name
+                    await session.commit()
+                    await session.refresh(user)
                 return user
 
             user = User(
