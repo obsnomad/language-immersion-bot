@@ -44,11 +44,20 @@ Install dependencies:
 uv sync --dev
 ```
 
-Start PostgreSQL and Redis:
+Start PostgreSQL, Redis, and pgAdmin:
 
 ```bash
 docker compose up -d
 ```
+
+Open pgAdmin at `http://localhost:5050` and sign in with the credentials defined in `docker-compose.yml`. To
+register the local Postgres container inside pgAdmin, use:
+
+- Host: `postgres`
+- Port: `5432`
+- Database: `POSTGRES_DB`
+- Username: `POSTGRES_USER`
+- Password: `POSTGRES_PASSWORD`
 
 Run database migrations:
 
@@ -106,3 +115,4 @@ docker-compose.yml
 - The app currently runs as a polling Telegram bot, not a webhook deployment.
 - Redis is provisioned in `docker-compose.yml`, but the current request flow is centered on PostgreSQL-backed session
   and mistake storage.
+- pgAdmin is provisioned in `docker-compose.yml` for local database inspection and admin tasks.
