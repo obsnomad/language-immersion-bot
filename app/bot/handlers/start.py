@@ -2,38 +2,17 @@ import logging
 
 from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 from aiohttp import ClientError
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.agents.registry import AgentRegistry
-from app.application.orchestrator import LearningOrchestrator
-from app.application.services import (
-    FeedbackService,
-    MistakeService,
-    PracticeService,
-    ProfileService,
-    SessionService,
-    TurnService,
-    UserService,
-)
-from app.llm import llm_client
+from app.application.container import get_service_container
+from app.infra import settings
 from app.message_formatting import render_markdown
 
 router = Router()
 logger = logging.getLogger(__name__)
-
-agent_registry = AgentRegistry(llm_client)
-practice_service = PracticeService(
-    user_service=UserService(),
-    profile_service=ProfileService(),
-    session_service=SessionService(),
-    turn_service=TurnService(),
-    orchestrator=LearningOrchestrator(),
-    agent_registry=agent_registry,
-    feedback_service=FeedbackService(agent_registry),
-    mistake_service=MistakeService(),
-)
+practice_service = get_service_container().practice_service
 
 
 def _build_infra_error_reply(error: Exception) -> str:
@@ -55,8 +34,11 @@ async def start_handler(message: Message) -> None:
             "Hello. I am your language immersion bot.\n"
             "I currently support English, Spanish, and Serbian.\n"
             "Ask for conversation practice, roleplay, grammar explanations, "
-            "interviews, or writing feedback."
+            "interviews, or writing feedback.\n"
+            "If the Mini App is configured, use Open App for dashboard, "
+            "review, and guided practice."
         ),
+        reply_markup=build_launch_keyboard(),
     )
 
 
@@ -80,3 +62,19 @@ async def chat_handler(message: Message) -> None:
         return
 
     await message.answer(result.reply_text)
+
+
+def build_launch_keyboard() -> InlineKeyboardMarkup | None:
+    if not settings.miniapp_url:
+        return None
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Open App",
+                    web_app=WebAppInfo(url=settings.miniapp_url),
+                )
+            ]
+        ]
+    )

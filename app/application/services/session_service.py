@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import desc, func, select
 
 from app.domain.enums import AgentRole, CorrectionMode, LanguageCode, LearningMode, SessionStatus
 from app.infra.db import LearningSession, SessionLocal
@@ -50,3 +50,20 @@ class SessionService:
             await session.commit()
             await session.refresh(learning_session)
             return learning_session
+
+    async def list_recent(self, *, user_id: int, limit: int = 5) -> list[LearningSession]:
+        async with SessionLocal() as session:
+            result = await session.execute(
+                select(LearningSession)
+                .where(LearningSession.user_id == user_id)
+                .order_by(desc(LearningSession.started_at))
+                .limit(limit)
+            )
+            return list(result.scalars().all())
+
+    async def count_for_user(self, *, user_id: int) -> int:
+        async with SessionLocal() as session:
+            result = await session.execute(
+                select(func.count(LearningSession.id)).where(LearningSession.user_id == user_id)
+            )
+            return int(result.scalar_one())

@@ -4,6 +4,15 @@ from app.infra.db import SessionLocal, User
 
 
 class UserService:
+    async def get_by_id(self, user_id: int) -> User | None:
+        async with SessionLocal() as session:
+            return await session.get(User, user_id)
+
+    async def get_by_telegram_id(self, telegram_id: int) -> User | None:
+        async with SessionLocal() as session:
+            result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+            return result.scalar_one_or_none()
+
     async def get_or_create_user(
         self,
         telegram_id: int,
