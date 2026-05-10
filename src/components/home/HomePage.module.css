@@ -1,0 +1,114 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.greeting {
+  padding: 4px 0 8px;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.planCard {
+  height: 100%;
+}
+
+.continueCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.twoColumn {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 12px;
+}
+
+.actions,
+.topicList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metricCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px;
+  text-align: center;
+  background: var(--mui-palette-action-hover);
+  border-radius: 10px;
+  gap: 4px;
+}
+
+.reviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reviewRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--mui-palette-divider);
+}
+
+.reviewRow:last-child {
+  border-bottom: none;
+}
+
+.reviewRowTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.seeAll {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  width: 100%;
+}
+
+.sessionList {
+  display: flex;
+  flex-direction: column;
+}
+
+.sessionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+}
+
+@media (max-width: 700px) {
+  .planGrid,
+  .twoColumn {
+    grid-template-columns: 1fr;
+  }
+
+  .continueCard {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

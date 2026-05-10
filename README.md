@@ -1,31 +1,34 @@
 # language-immersion-bot
 
-Telegram bot and Mini App backend for language practice with Mistral-backed specialist agents, PostgreSQL persistence, and aiogram polling.
+Telegram bot and Mini App for language practice. The app is now a unified Next.js stack: Telegram Mini App UI, API
+routes, bot webhook, persistence, and LLM orchestration all run from the same TypeScript codebase.
 
-## What it does
+## What It Does
 
-- Routes each user message into a learning mode such as conversation, grammar, writing, vocabulary, review, scenario
-  roleplay, or interview practice.
-- Supports English, Spanish, and Serbian.
-- Uses specialist agents for conversation, teaching, exam simulation, review, and feedback.
-- Stores users, profiles, learning sessions, message turns, and detected mistakes in PostgreSQL.
-- Adds delayed feedback summaries when the user profile is configured for delayed correction.
-- Exposes FastAPI endpoints for Telegram Mini App authentication, profile access, review queues, and guided practice.
-- Ships a Create React App Mini App under `miniapp/` and serves its production build from the same FastAPI process.
+- Provides a Telegram Mini App for conversation practice, review, progress, and profile settings.
+- Supports English, Spanish, and Serbian learning profiles.
+- Routes messages into conversation, scenario, grammar, vocabulary, writing, exam, and review modes.
+- Uses Mistral-backed specialist prompts for tutoring, feedback, review drills, and exam-style practice.
+- Stores users, language profiles, sessions, message history, and mistakes in PostgreSQL.
+- Authenticates Mini App users with Telegram init data and issues JWT session tokens.
+- Exposes a grammY webhook endpoint for Telegram bot messages.
 
 ## Stack
 
-- Python 3.14+
-- aiogram 3
-- Mistral API
-- SQLAlchemy async + asyncpg
-- Alembic
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- MUI 7 + Emotion
+- grammY
+- Drizzle ORM + drizzle-kit
 - PostgreSQL
-- Redis
+- Vercel AI SDK + Mistral provider
+- jose for JWT sessions
+- Zod for request validation
 
 ## Configuration
 
-Copy the example environment file and fill in your secrets:
+Copy the example environment file and fill in the real values:
 
 ```bash
 cp .env.example .env
@@ -35,145 +38,152 @@ Required values:
 
 - `BOT_TOKEN`
 - `MINIAPP_URL`
+- `SESSION_SECRET`
 - `MISTRAL_API_KEY`
+- `DATABASE_URL`, or the individual `POSTGRES_*` values
 
-Default local infrastructure values already match `docker-compose.yml`.
+For local Docker Postgres, these defaults match `docker-compose.yml`:
 
-## Local setup
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ai_language_bot
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=ai_language_bot
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+```
+
+## Local Development
 
 Install dependencies:
 
 ```bash
-uv sync --dev
-```
-
-Start PostgreSQL, Redis, and pgAdmin:
-
-```bash
-docker compose up -d
-```
-
-Open pgAdmin at `http://localhost:5050` and sign in with the credentials defined in `docker-compose.yml`. To
-register the local Postgres container inside pgAdmin, use:
-
-- Host: `postgres`
-- Port: `5432`
-- Database: `POSTGRES_DB`
-- Username: `POSTGRES_USER`
-- Password: `POSTGRES_PASSWORD`
-
-Run database migrations:
-
-```bash
-uv run alembic upgrade head
-```
-
-Start the bot:
-
-```bash
-uv run python main.py
-```
-
-Start the API:
-
-```bash
-uv run uvicorn app.api.main:app --reload --port 8000
-```
-
-For frontend hot reload during development, run the React dev server from `miniapp/`:
-
-```bash
-cd miniapp
 npm install
-npm start
 ```
 
-This serves the mini app at `http://127.0.0.1/` on port `80` and proxies `/api` requests to the
-FastAPI backend on `http://127.0.0.1:8000`.
-
-The frontend dev server uses `DANGEROUSLY_DISABLE_HOST_CHECK=true` in `miniapp/.env.development` so CRA
-can accept the ngrok host during local Mini App development.
-
-To open the Mini App from Telegram during local development, expose the frontend dev server with ngrok:
+Start local infrastructure:
 
 ```bash
-ngrok http 80
-```
-
-Then update `.env` to use the ngrok HTTPS origin:
-
-```bash
-MINIAPP_URL=https://your-subdomain.ngrok-free.dev/
-MINIAPP_CORS_ORIGINS=https://your-subdomain.ngrok-free.dev
-```
-
-Use that same HTTPS URL in BotFather for the bot's Mini App or menu button. If you change the ngrok
-subdomain, update both `.env` and the BotFather configuration.
-
-Build the Mini App only when you want FastAPI to serve the production bundle:
-
-```bash
-cd miniapp
-npm run build
-```
-
-The FastAPI app serves:
-
-- `GET /health`
-- `POST /api/auth/telegram-mini-app`
-- `GET /api/me`
-- `GET/PATCH /api/profile`
-- `POST /api/learning/session/message`
-- `GET /api/learning/review/today`
-- `GET /api/progress/summary`
-- `GET /miniapp/`
-
-If Docker Desktop is pointing at the wrong context, switch back to `default` first:
-
-```bash
-docker context use default
 docker compose up -d
 ```
 
-## Development
-
-Run tests:
+Apply the Drizzle schema:
 
 ```bash
-uv run pytest
+npm run db:push
 ```
 
-Run linting and formatting:
+Start the Next dev server:
 
 ```bash
-uv run ruff check .
-uv run ruff format .
+npm run dev
 ```
 
-## Project layout
+The app runs at:
 
 ```text
-app/
-  agents/         specialist LLM agents
-  api/            FastAPI app and Mini App auth endpoints
-  application/    orchestration and use-case services
-  bot/            Telegram handlers and router
-  domain/         enums and schemas
-  infra/          settings and database wiring
-  llm/            Mistral client
-  main.py         aiogram application entry point
-alembic/          database migrations
-miniapp/          CRA source for the Telegram Mini App
-tests/            pytest suite
-main.py           top-level launcher
-docker-compose.yml
+http://localhost:3000
+```
+
+Useful scripts:
+
+```bash
+npm run build
+npm run start
+npm run db:generate
+npm run db:migrate
+npm run db:studio
+```
+
+## Telegram Mini App Development
+
+Expose the local Next dev server with ngrok:
+
+```bash
+ngrok http 3000
+```
+
+Set the HTTPS ngrok origin in `.env`:
+
+```env
+MINIAPP_URL=https://your-subdomain.ngrok-free.dev
+```
+
+Use that same HTTPS URL in BotFather for the bot's Mini App or menu button.
+
+Next dev mode allows the configured ngrok host through `allowedDevOrigins` in `next.config.ts`, including HMR websocket
+requests.
+
+## Telegram Webhook
+
+The bot webhook endpoint is:
+
+```text
+POST /api/bot/webhook
+```
+
+Set it with:
+
+```bash
+npm run bot:set-webhook
+```
+
+The script reads:
+
+- `BOT_TOKEN`
+- `MINIAPP_URL`
+
+## API Routes
+
+- `POST /api/auth/telegram-mini-app`
+- `GET /api/me`
+- `GET /api/profile`
+- `PATCH /api/profile`
+- `POST /api/learning/session/message`
+- `GET /api/learning/session/history`
+- `GET /api/learning/review/today`
+- `GET /api/learning/mistakes`
+- `GET /api/progress/summary`
+- `POST /api/bot/webhook`
+- `GET /api/health`
+
+Protected API routes expect:
+
+```http
+Authorization: Bearer <jwt>
+X-Language: en | es | sr
+```
+
+Mini App authentication expects Telegram init data:
+
+```http
+Authorization: tma <telegram init data>
+```
+
+## Project Layout
+
+```text
+src/
+  app/                 Next App Router pages and API routes
+  components/          Mini App UI, layout, providers, page components
+  lib/
+    agents/            specialist prompt builders
+    auth/              Telegram init-data validation and JWT sessions
+    bot/               grammY bot setup
+    db/                Drizzle database client and schema
+    services/          profile, practice, session, turn, mistake services
+    llm.ts             Mistral provider integration
+    orchestrator.ts    mode and agent routing
+  types/               shared TypeScript domain types
+scripts/
+  set-webhook.mjs      Telegram webhook setup
+docker-compose.yml     local PostgreSQL and Redis
+drizzle.config.ts      Drizzle Kit configuration
 ```
 
 ## Notes
 
-- The app currently runs as a polling Telegram bot, not a webhook deployment.
-- The bot can expose an `Open App` menu button and `/start` launch button when `MINIAPP_URL` is configured.
-- Set the same HTTPS `MINIAPP_URL` in BotFather for the bot's menu button or Web App button.
-- Redis is provisioned in `docker-compose.yml`, but the current request flow is centered on PostgreSQL-backed session
-  and mistake storage.
-- pgAdmin is provisioned in `docker-compose.yml` for local database inspection and admin tasks.
+- Redis is still provisioned by Docker Compose, but the current request flow uses PostgreSQL-backed sessions and
+  mistakes.
+- Telegram injects theme CSS variables into the root document. The root layout suppresses hydration warnings for those
+  expected Telegram-side mutations.
