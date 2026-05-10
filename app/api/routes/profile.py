@@ -28,8 +28,8 @@ async def update_profile(
 ) -> ProfileResponse:
     profile = await services.profile_service.update_profile(
         context.user.id,
+        language=context.learning_language,
         native_language=payload.native_language,
-        target_languages=_join_languages(payload.target_languages),
         current_level=payload.current_level,
         preferred_mode=payload.preferred_mode.value if payload.preferred_mode else None,
         feedback_style=payload.feedback_style.value if payload.feedback_style else None,
@@ -39,20 +39,12 @@ async def update_profile(
 
 
 def _serialize_profile(profile) -> ProfileResponse:
-    target_languages = [
-        item.strip() for item in profile.target_languages.split(",") if item.strip()
-    ]
     return ProfileResponse(
+        language=profile.language,
         native_language=profile.native_language,
-        target_languages=target_languages,
+        target_languages=[profile.language],
         current_level=profile.current_level,
         preferred_mode=profile.preferred_mode,
         feedback_style=profile.feedback_style,
         goals=profile.goals,
     )
-
-
-def _join_languages(languages) -> str | None:
-    if languages is None:
-        return None
-    return ",".join(language.value for language in languages)

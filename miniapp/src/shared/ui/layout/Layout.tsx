@@ -2,13 +2,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-import type {
-  PracticeMessageResponse,
-  Profile,
-  ProgressSummary,
-  ReviewItem,
-  StoredSession,
-} from '@/shared/api';
+import type { Profile, ProgressSummary, ReviewItem, StoredSession } from '@/shared/api';
 import {
   authenticateTelegramMiniApp,
   fetchProfile,
@@ -17,6 +11,10 @@ import {
   submitPracticeMessage,
 } from '@/shared/api';
 import { profileLanguageToLocale, useAppI18n } from '@/shared/i18n/useAppI18n';
+import { setActiveLearningLanguage } from '@/shared/language/runtime';
+import { readStoredLearningLanguage, saveStoredLearningLanguage } from '@/shared/language/storage';
+import type { LearningLanguage } from '@/shared/language/types';
+import { learningLanguageLabels, learningLanguages } from '@/shared/language/types';
 import { isUnauthorized } from '@/shared/lib/format';
 import {
   clearStoredSession,
@@ -26,20 +24,39 @@ import {
 } from '@/shared/session/session';
 import { getTelegramInitData } from '@/shared/telegram/telegram';
 import {
-  Alert,
   AppBar,
   BottomNavigation,
   BottomNavigationAction,
   Box,
   Container,
+  MenuItem,
+  Select,
   Stack,
   Toolbar,
+  Typography,
 } from '@mui/material';
 
-import type { LayoutContextValue } from './LayoutContext';
+import {
+  type DailyPlanItem,
+  type LanguageScopeState,
+  LayoutContextProvider,
+  type LayoutContextValue,
+  type QuickAction,
+} from './LayoutContext';
 
-type TabId = 'dashboard' | 'review' | 'conversation' | 'repeat-words';
-type TabPath = `/${TabId}`;
+type StatusTone = 'info' | 'warning' | 'error' | 'success';
+
+interface TabDefinition {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  path: string;
+  matchPaths: string[];
+}
+
+interface LayoutProps {
+  tabs: TabDefinition[];
+}
 
 const emptySummary: ProgressSummary = {
   sessions_total: 0,
@@ -48,26 +65,47 @@ const emptySummary: ProgressSummary = {
   recent_sessions: [],
 };
 
-type StatusTone = 'info' | 'warning' | 'error' | 'success';
+const createEmptyLanguageState = (): LanguageScopeState => ({
+  profile: null,
+  reviewItems: [],
+  summary: emptySummary,
+  practiceInput: '',
+  practiceResult: null,
+  dailyPlan: [],
+  weakTopics: [],
+  quickActions: [],
+});
 
-interface LayoutProps {
-  tabs: Array<{ id: TabId; label: string; icon: ReactNode; path: TabPath }>;
-}
+const initialLanguageState: Record<LearningLanguage, LanguageScopeState> = {
+  en: createEmptyLanguageState(),
+  es: createEmptyLanguageState(),
+};
+
+const matchTab = (pathname: string, tabs: TabDefinition[]): TabDefinition =>
+  tabs.find((tab) =>
+    tab.matchPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`)),
+  ) ?? tabs[0];
 
 export const Layout = ({ tabs }: LayoutProps) => {
+  const storedLanguage = readStoredLearningLanguage() ?? 'en';
   const { i18n, t } = useAppI18n();
   const [session, setSession] = useState<StoredSession | null>(() => readStoredSession());
   const [status, setStatus] = useState(() => t('status.connectingTelegram'));
   const [statusTone, setStatusTone] = useState<StatusTone>('info');
-  const [summary, setSummary] = useState(emptySummary);
-  const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
-  const [practiceInput, setPracticeInput] = useState('');
-  const [practiceResult, setPracticeResult] = useState<PracticeMessageResponse | null>(null);
+  const [currentLanguage, setCurrentLanguage] = useState<LearningLanguage>(storedLanguage);
+  const [languageState, setLanguageState] =
+    useState<Record<LearningLanguage, LanguageScopeState>>(initialLanguageState);
   const [isPracticePending, setIsPracticePending] = useState(false);
   const [isReviewPending, setIsReviewPending] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setActiveLearningLanguage(currentLanguage);
+    saveStoredLearningLanguage(currentLanguage);
+  }, [currentLanguage]);
 
   useEffect(() => {
     let ignore = false;
@@ -80,13 +118,15 @@ export const Layout = ({ tabs }: LayoutProps) => {
             setSession(storedSession);
             updateStatus(t('status.restoringSession'), 'info');
           }
+
           try {
-            await hydrateTabs(storedSession.accessToken, ignore);
+            await hydrateLanguage(currentLanguage, storedSession.accessToken, ignore);
             return;
           } catch (error) {
             if (!isUnauthorized(error)) {
               throw error;
             }
+
             clearStoredSession();
             if (!ignore) {
               setSession(null);
@@ -94,7 +134,7 @@ export const Layout = ({ tabs }: LayoutProps) => {
           }
         }
 
-        await authenticateWithTelegram({ ignore });
+        await authenticateWithTelegram(ignore);
       } catch (error) {
         if (!ignore) {
           updateStatus(getErrorMessage(error, t('status.openFromTelegram')), 'warning');
@@ -106,21 +146,16 @@ export const Layout = ({ tabs }: LayoutProps) => {
       }
     };
 
-    bootstrap();
+    void bootstrap();
 
     return () => {
       ignore = true;
     };
-    // The bootstrap flow is intentionally a one-time mount effect.
+    // Intentional one-time bootstrap.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function authenticateWithTelegram({
-    ignore = false,
-  }: {
-    ignore?: boolean;
-    silent?: boolean;
-  } = {}): Promise<StoredSession> {
+  async function authenticateWithTelegram(ignore = false): Promise<StoredSession> {
     const initData = getTelegramInitData();
     if (!initData) {
       if (!ignore) {
@@ -136,25 +171,30 @@ export const Layout = ({ tabs }: LayoutProps) => {
     const authPayload = await authenticateTelegramMiniApp(initData);
     await i18n.changeLanguage(profileLanguageToLocale(authPayload.profile.native_language));
 
-    const nextSession = {
+    const nextSession: StoredSession = {
       accessToken: authPayload.access_token,
       expiresAt: authPayload.expires_at,
-    } satisfies StoredSession;
+    };
+
     saveStoredSession(nextSession);
 
     if (!ignore) {
       setSession(nextSession);
     }
 
-    await hydrateTabs(nextSession.accessToken, ignore, authPayload.profile);
+    await hydrateLanguage(currentLanguage, nextSession.accessToken, ignore, authPayload.profile);
+
     return nextSession;
   }
 
-  async function hydrateTabs(
+  async function hydrateLanguage(
+    language: LearningLanguage,
     accessToken: string,
     ignore = false,
     profile?: Profile,
   ): Promise<void> {
+    setActiveLearningLanguage(language);
+
     const [progressSummary, todayReview, activeProfile] = await Promise.all([
       fetchProgressSummary(accessToken),
       fetchReviewItems(accessToken),
@@ -165,10 +205,24 @@ export const Layout = ({ tabs }: LayoutProps) => {
       return;
     }
 
-    await i18n.changeLanguage(profileLanguageToLocale(activeProfile.native_language));
-    setSummary(progressSummary);
-    setReviewItems(todayReview.items);
-    updateStatus(t('status.sessionActive'), 'success');
+    setLanguageState((current) => ({
+      ...current,
+      [language]: {
+        ...current[language],
+        profile: activeProfile,
+        reviewItems: todayReview.items,
+        summary: progressSummary,
+        dailyPlan: buildDailyPlan(todayReview.items, progressSummary, t),
+        weakTopics: buildWeakTopics(todayReview.items),
+        quickActions: buildQuickActions(t),
+        practiceInput: '',
+        practiceResult: null,
+      },
+    }));
+    updateStatus(
+      t('status.languageActive', { language: learningLanguageLabels[language] }),
+      'success',
+    );
   }
 
   async function withAuthorizedSession<TResponse>(
@@ -176,13 +230,14 @@ export const Layout = ({ tabs }: LayoutProps) => {
     retryAuth = true,
   ): Promise<TResponse> {
     let activeSession = session || readStoredSession();
+
     if (!activeSession || isSessionExpired(activeSession)) {
       clearStoredSession();
       setSession(null);
       if (!retryAuth) {
         throw new Error(t('status.sessionExpired'));
       }
-      activeSession = await authenticateWithTelegram({ silent: true });
+      activeSession = await authenticateWithTelegram();
     }
 
     try {
@@ -194,7 +249,7 @@ export const Layout = ({ tabs }: LayoutProps) => {
 
       clearStoredSession();
       setSession(null);
-      const refreshedSession = await authenticateWithTelegram({ silent: true });
+      const refreshedSession = await authenticateWithTelegram();
       return operation(refreshedSession.accessToken);
     }
   }
@@ -202,8 +257,17 @@ export const Layout = ({ tabs }: LayoutProps) => {
   async function handleRefreshReview(): Promise<void> {
     try {
       setIsReviewPending(true);
+      setActiveLearningLanguage(currentLanguage);
       const payload = await withAuthorizedSession(fetchReviewItems);
-      setReviewItems(payload.items);
+      setLanguageState((current) => ({
+        ...current,
+        [currentLanguage]: {
+          ...current[currentLanguage],
+          reviewItems: payload.items,
+          dailyPlan: buildDailyPlan(payload.items, current[currentLanguage].summary, t),
+          weakTopics: buildWeakTopics(payload.items),
+        },
+      }));
       updateStatus(t('status.reviewQueueUpdated'), 'info');
     } catch (error) {
       updateStatus(getErrorMessage(error, t('status.refreshReviewFailed')), 'error');
@@ -214,7 +278,9 @@ export const Layout = ({ tabs }: LayoutProps) => {
 
   async function handleSubmitPractice(event: SubmitEvent): Promise<void> {
     event.preventDefault();
-    const text = practiceInput.trim();
+    const activeState = languageState[currentLanguage];
+    const text = activeState.practiceInput.trim();
+
     if (!text) {
       updateStatus(t('status.enterPracticeMessage'), 'warning');
       return;
@@ -223,18 +289,29 @@ export const Layout = ({ tabs }: LayoutProps) => {
     try {
       setIsPracticePending(true);
       updateStatus(t('status.sendingMessage'), 'info');
+      setActiveLearningLanguage(currentLanguage);
+
       const response = await withAuthorizedSession((accessToken) =>
         submitPracticeMessage(accessToken, text),
       );
-      setPracticeResult(response);
-      setPracticeInput('');
 
       const [progressSummary, todayReview] = await Promise.all([
         withAuthorizedSession(fetchProgressSummary),
         withAuthorizedSession(fetchReviewItems),
       ]);
-      setSummary(progressSummary);
-      setReviewItems(todayReview.items);
+
+      setLanguageState((current) => ({
+        ...current,
+        [currentLanguage]: {
+          ...current[currentLanguage],
+          practiceInput: '',
+          practiceResult: response,
+          summary: progressSummary,
+          reviewItems: todayReview.items,
+          dailyPlan: buildDailyPlan(todayReview.items, progressSummary, t),
+          weakTopics: buildWeakTopics(todayReview.items),
+        },
+      }));
       updateStatus(t('status.replyReady'), 'success');
     } catch (error) {
       updateStatus(getErrorMessage(error, t('status.sendPracticeFailed')), 'error');
@@ -243,66 +320,216 @@ export const Layout = ({ tabs }: LayoutProps) => {
     }
   }
 
+  async function switchLanguage(language: LearningLanguage): Promise<void> {
+    if (language === currentLanguage) {
+      return;
+    }
+
+    try {
+      setIsLanguageSwitching(true);
+      setCurrentLanguage(language);
+      setActiveLearningLanguage(language);
+      setLanguageState((current) => ({
+        ...current,
+        [language]: {
+          ...current[language],
+          practiceInput: '',
+          practiceResult: null,
+        },
+      }));
+      updateStatus(
+        t('status.switchingLanguage', { language: learningLanguageLabels[language] }),
+        'info',
+      );
+      await withAuthorizedSession((accessToken) => hydrateLanguage(language, accessToken), false);
+    } catch (error) {
+      updateStatus(getErrorMessage(error, t('status.languageSwitchFailed')), 'error');
+    } finally {
+      setIsLanguageSwitching(false);
+    }
+  }
+
   const updateStatus = (message: string, tone: StatusTone): void => {
     setStatus(message);
     setStatusTone(tone);
   };
 
-  const isAuthorized = Boolean(session?.accessToken);
-  const activeTab = tabs.find((tab) => tab.path === location.pathname)?.id ?? 'dashboard';
+  const activeTab = matchTab(location.pathname, tabs);
+  const activeLanguageState = languageState[currentLanguage];
   const context: LayoutContextValue = {
-    handleRefreshReview,
-    handleSubmitPractice,
-    isAuthorized,
+    session,
+    currentLanguage,
+    currentSectionTitle: activeTab.label,
+    availableLanguages: [...learningLanguages],
+    isAuthorized: Boolean(session?.accessToken),
     isBootstrapping,
+    isLanguageSwitching,
     isPracticePending,
     isReviewPending,
-    practiceInput,
-    practiceResult,
-    reviewItems,
-    setPracticeInput,
-    summary,
+    status,
+    statusTone,
+    languageState: activeLanguageState,
+    switchLanguage,
+    handleRefreshReview,
+    handleSubmitPractice,
+    setPracticeInput: (value: string) =>
+      setLanguageState((current) => ({
+        ...current,
+        [currentLanguage]: {
+          ...current[currentLanguage],
+          practiceInput: value,
+        },
+      })),
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', pb: 'calc(92px + env(safe-area-inset-bottom))' }}>
-      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 }, py: { xs: 3, sm: 4 } }}>
-        <Stack component="div" spacing={3}>
-          <Alert severity={statusTone} variant="outlined">
-            {status}
-          </Alert>
-          <Outlet context={context} />
-        </Stack>
-      </Container>
-      <AppBar
-        position="fixed"
-        color="transparent"
-        sx={{
-          inset: 'auto 10px 10px',
-          boxShadow: 'none',
-          backdropFilter: 'blur(18px)',
-          bgcolor: 'transparent',
-          borderRadius: '100px',
-          width: 'calc(100vw - 20px)',
-        }}
-      >
-        <Toolbar disableGutters sx={{ px: 1 }}>
-          <BottomNavigation value={activeTab} sx={{ width: '100%', bgcolor: 'transparent' }}>
-            {tabs.map((tab) => (
-              <BottomNavigationAction
-                key={tab.id}
-                value={tab.id}
-                label={tab.label}
-                icon={tab.icon}
-                onClick={() => navigate(tab.path)}
-              />
-            ))}
-          </BottomNavigation>
-        </Toolbar>
-      </AppBar>
-    </Box>
+    <LayoutContextProvider value={context}>
+      <Box sx={{ minHeight: '100vh', pb: 'calc(68px + env(safe-area-inset-bottom))' }}>
+        <AppBar
+          position="sticky"
+          color="transparent"
+          sx={{
+            top: 0,
+            backdropFilter: 'blur(18px)',
+            backgroundImage:
+              'radial-gradient(circle at top left, rgba(84, 156, 255, 0.18) 0%, rgba(84, 156, 255, 0.08) 24%, rgba(0, 0, 0, 0.10) 58%, rgba(0, 0, 0, 0.04) 100%)',
+            bgcolor: '#00000020',
+          }}
+        >
+          <Toolbar sx={{ px: { xs: 2, sm: 3 }, py: 1.5 }}>
+            <Stack direction="row" spacing={2} sx={{ width: '100%', alignItems: 'center' }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="h6" noWrap>
+                  {activeTab.label}
+                </Typography>
+              </Box>
+
+              <Select
+                value={currentLanguage}
+                size="small"
+                disabled={isBootstrapping || isLanguageSwitching}
+                onChange={(event) => {
+                  void switchLanguage(event.target.value as LearningLanguage);
+                }}
+                sx={{ minWidth: 88 }}
+              >
+                {learningLanguages.map((language) => (
+                  <MenuItem key={language} value={language}>
+                    {learningLanguageLabels[language]}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Stack>
+          </Toolbar>
+        </AppBar>
+
+        <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 }, py: { xs: 3, sm: 4 } }}>
+          <Stack spacing={3}>
+            <Outlet />
+          </Stack>
+        </Container>
+
+        <AppBar
+          position="fixed"
+          color="transparent"
+          sx={{
+            inset: 'auto 20px 10px',
+            boxShadow: 'inset 0 1px 1px #ffffff55',
+            backdropFilter: 'blur(18px)',
+            bgcolor: '#00000020',
+            borderRadius: '50px',
+            width: 'calc(100vw - 40px)',
+            p: '4px',
+            borderBottom: '1px solid #ffffff11',
+          }}
+        >
+          <Toolbar disableGutters sx={{ px: 1 }}>
+            <BottomNavigation
+              value={activeTab.id}
+              showLabels={false}
+              sx={{
+                width: '100%',
+                bgcolor: 'transparent',
+                justifyContent: 'stretch',
+                '& .MuiBottomNavigationAction-root': {
+                  minWidth: 0,
+                  maxWidth: 'none',
+                  flex: 1,
+                  px: 0.5,
+                  borderRadius: '50px',
+                },
+              }}
+            >
+              {tabs.map((tab) => (
+                <BottomNavigationAction
+                  key={tab.id}
+                  value={tab.id}
+                  icon={tab.icon}
+                  onClick={() => navigate(tab.path)}
+                />
+              ))}
+            </BottomNavigation>
+          </Toolbar>
+        </AppBar>
+      </Box>
+    </LayoutContextProvider>
   );
 };
+
+const buildDailyPlan = (
+  reviewItems: ReviewItem[],
+  summary: ProgressSummary,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): DailyPlanItem[] => [
+  {
+    id: 'mistakes',
+    title: t('layout.dailyPlan.mistakes.title', {
+      count: Math.min(Math.max(reviewItems.length, 3), 5),
+    }),
+    detail: summary.open_mistakes
+      ? t('layout.dailyPlan.mistakes.detailOpen', { count: summary.open_mistakes })
+      : t('layout.dailyPlan.mistakes.detailEmpty'),
+    kind: 'review',
+  },
+  {
+    id: 'scenario',
+    title: t('layout.dailyPlan.scenario.title'),
+    detail: summary.recent_sessions[0]
+      ? t('layout.dailyPlan.scenario.detailContinue', {
+          mode: t(`enum.mode.${summary.recent_sessions[0].mode}`, {
+            defaultValue: summary.recent_sessions[0].mode.replace(/_/g, ' '),
+          }),
+        })
+      : t('layout.dailyPlan.scenario.detailEmpty'),
+    kind: 'scenario',
+  },
+  {
+    id: 'vocabulary',
+    title: t('layout.dailyPlan.vocabulary.title'),
+    detail: reviewItems[0]?.correction
+      ? t('layout.dailyPlan.vocabulary.detailUse', { correction: reviewItems[0].correction })
+      : t('layout.dailyPlan.vocabulary.detailEmpty'),
+    kind: 'vocabulary',
+  },
+];
+
+const buildWeakTopics = (reviewItems: ReviewItem[]): string[] => {
+  const counts = reviewItems.reduce<Record<string, number>>((accumulator, item) => {
+    accumulator[item.category] = (accumulator[item.category] || 0) + 1;
+    return accumulator;
+  }, {});
+
+  return Object.entries(counts)
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 3)
+    .map(([topic]) => topic.replace(/_/g, ' '));
+};
+
+const buildQuickActions = (t: (key: string) => string): QuickAction[] => [
+  { id: 'conversation', label: t('home.quickActions.conversation'), path: '/practice' },
+  { id: 'roleplay', label: t('home.quickActions.roleplay'), path: '/practice' },
+  { id: 'mistakes', label: t('home.quickActions.mistakes'), path: '/review' },
+];
 
 const getErrorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error ? error.message : fallback;

@@ -8,15 +8,18 @@ class LearningOrchestrator:
         *,
         user_text: str,
         preferred_correction_mode: CorrectionMode | None = None,
+        learning_language: LanguageCode | None = None,
+        support_language: str = "ru",
     ) -> RouteDecision:
         text = user_text.lower()
-        language = self._detect_language(text)
+        language = learning_language or self._detect_language(text)
         mode = self._detect_mode(text)
         agent = self._select_agent(mode)
         correction_mode = preferred_correction_mode or self._detect_correction_mode(text)
         scenario_hint = self._extract_scenario_hint(text, mode)
         return RouteDecision(
             language=language,
+            support_language=support_language,
             mode=mode,
             agent=agent,
             correction_mode=correction_mode,

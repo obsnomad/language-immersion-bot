@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Header, HTTPException, Request, status
 
 from app.api.security import (
     MiniAppAuthError,
@@ -13,14 +13,16 @@ from app.api.security import (
     parse_authorization_header,
 )
 from app.application.container import ServiceContainer, get_service_container
+from app.domain.enums import LanguageCode
 from app.infra import settings
-from app.infra.db import User, UserProfile
+from app.infra.db import LanguageProfile, User
 
 
 @dataclass(frozen=True)
 class CurrentUserContext:
     user: User
-    profile: UserProfile
+    profile: LanguageProfile
+    learning_language: LanguageCode
     claims: SessionClaims | None = None
     telegram_auth: VerifiedMiniAppInitData | None = None
 
@@ -45,9 +47,26 @@ def get_session_token_signer() -> SessionTokenSigner:
     )
 
 
+def get_learning_language(
+    x_language: Annotated[str | None, Header(alias="X-Language")] = None,
+) -> LanguageCode:
+    if x_language is None:
+        return LanguageCode.ENGLISH
+
+    normalized = x_language.strip().lower()
+    try:
+        return LanguageCode(normalized)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Unsupported X-Language value.",
+        ) from error
+
+
 TokenSignerDep = Annotated[SessionTokenSigner, Depends(get_session_token_signer)]
 ServicesDep = Annotated[ServiceContainer, Depends(get_services)]
 InitDataValidatorDep = Annotated[TelegramInitDataValidator, Depends(get_init_data_validator)]
+LearningLanguageDep = Annotated[LanguageCode, Depends(get_learning_language)]
 
 
 async def get_current_user_context(
@@ -55,6 +74,7 @@ async def get_current_user_context(
     signer: TokenSignerDep,
     validator: InitDataValidatorDep,
     services: ServicesDep,
+    learning_language: LearningLanguageDep,
 ) -> CurrentUserContext:
     try:
         credentials = parse_authorization_header(request.headers.get("Authorization"))
@@ -86,8 +106,16 @@ async def get_current_user_context(
                 detail="User session is no longer valid.",
             )
 
-        profile = await services.profile_service.get_or_create_profile(user.id)
-        return CurrentUserContext(user=user, profile=profile, claims=claims)
+        profile = await services.profile_service.get_or_create_profile(
+            user.id,
+            language=learning_language,
+        )
+        return CurrentUserContext(
+            user=user,
+            profile=profile,
+            learning_language=learning_language,
+            claims=claims,
+        )
 
     try:
         verified = validator.validate(credentials.value)
@@ -102,8 +130,16 @@ async def get_current_user_context(
         username=verified.user.username,
         first_name=verified.user.first_name,
     )
-    profile = await services.profile_service.get_or_create_profile(user.id)
-    return CurrentUserContext(user=user, profile=profile, telegram_auth=verified)
+    profile = await services.profile_service.get_or_create_profile(
+        user.id,
+        language=learning_language,
+    )
+    return CurrentUserContext(
+        user=user,
+        profile=profile,
+        learning_language=learning_language,
+        telegram_auth=verified,
+    )
 
 
 CurrentUserDep = Annotated[CurrentUserContext, Depends(get_current_user_context)]

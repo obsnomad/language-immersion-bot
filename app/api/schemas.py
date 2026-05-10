@@ -18,6 +18,7 @@ class UserResponse(BaseModel):
 
 
 class ProfileResponse(BaseModel):
+    language: LanguageCode
     native_language: str
     target_languages: list[str]
     current_level: str | None = None

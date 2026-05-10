@@ -2,6 +2,7 @@ from fastapi import APIRouter, Body, HTTPException, Request, status
 
 from app.api.dependencies import (
     InitDataValidatorDep,
+    LearningLanguageDep,
     ServicesDep,
     TokenSignerDep,
 )
@@ -13,11 +14,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/telegram-mini-app", response_model=AuthResponse)
 async def authenticate_telegram_mini_app(
-        request: Request,
-        validator: InitDataValidatorDep,
-        signer: TokenSignerDep,
-        services: ServicesDep,
-        payload: TelegramMiniAppAuthRequest | None = Body(default=None),
+    request: Request,
+    validator: InitDataValidatorDep,
+    signer: TokenSignerDep,
+    services: ServicesDep,
+    learning_language: LearningLanguageDep,
+    payload: TelegramMiniAppAuthRequest | None = Body(default=None),
 ) -> AuthResponse:
     try:
         verified = validator.validate(_extract_init_data(request, payload))
@@ -32,7 +34,10 @@ async def authenticate_telegram_mini_app(
         username=verified.user.username,
         first_name=verified.user.first_name,
     )
-    profile = await services.profile_service.get_or_create_profile(user.id)
+    profile = await services.profile_service.get_or_create_profile(
+        user.id,
+        language=learning_language,
+    )
     claims = signer.issue(user_id=user.id, telegram_id=user.telegram_id)
     access_token = signer.dumps(claims)
     return AuthResponse(
@@ -40,8 +45,9 @@ async def authenticate_telegram_mini_app(
         expires_at=claims.expires_at,
         user=UserResponse.model_validate(user, from_attributes=True),
         profile=ProfileResponse(
+            language=profile.language,
             native_language=profile.native_language,
-            target_languages=_split_languages(profile.target_languages),
+            target_languages=[profile.language],
             current_level=profile.current_level,
             preferred_mode=profile.preferred_mode,
             feedback_style=profile.feedback_style,
@@ -50,13 +56,9 @@ async def authenticate_telegram_mini_app(
     )
 
 
-def _split_languages(raw_value: str) -> list[str]:
-    return [item.strip() for item in raw_value.split(",") if item.strip()]
-
-
 def _extract_init_data(
-        request: Request,
-        payload: TelegramMiniAppAuthRequest | None,
+    request: Request,
+    payload: TelegramMiniAppAuthRequest | None,
 ) -> str:
     credentials = parse_authorization_header(request.headers.get("Authorization"))
     if credentials is not None:

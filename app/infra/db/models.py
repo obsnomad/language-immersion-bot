@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -17,24 +17,25 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    profile: Mapped[UserProfile | None] = relationship(back_populates="user")
+    profiles: Mapped[list[LanguageProfile]] = relationship(back_populates="user")
     sessions: Mapped[list[LearningSession]] = relationship(back_populates="user")
     mistakes: Mapped[list[Mistake]] = relationship(back_populates="user")
 
 
-class UserProfile(Base):
-    __tablename__ = "user_profiles"
+class LanguageProfile(Base):
+    __tablename__ = "language_profiles"
+    __table_args__ = (UniqueConstraint("user_id", "language", name="uq_language_profiles_user_language"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    language: Mapped[str] = mapped_column(String(8), index=True)
     native_language: Mapped[str] = mapped_column(String(8), default="ru")
-    target_languages: Mapped[str] = mapped_column(String(64), default="en")
     current_level: Mapped[str | None] = mapped_column(String(16), nullable=True)
     preferred_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
     feedback_style: Mapped[str] = mapped_column(String(32), default="delayed")
     goals: Mapped[str | None] = mapped_column(Text(), nullable=True)
 
-    user: Mapped[User] = relationship(back_populates="profile")
+    user: Mapped[User] = relationship(back_populates="profiles")
 
 
 class LearningSession(Base):

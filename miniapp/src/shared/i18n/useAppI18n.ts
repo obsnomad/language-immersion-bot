@@ -27,9 +27,14 @@ export const useAppI18n = () => {
           dateStyle: 'medium',
           timeStyle: 'short',
         }).format(new Date(value)),
-      formatMode: (value: string) => translation.t(`enum.mode.${value}`, value.replace(/_/g, ' ')),
+      formatMode: (value: string) =>
+        translation.t(`enum.mode.${value}`, {
+          defaultValue: value.replace(/_/g, ' '),
+        }),
       formatCategory: (value: string) =>
-        translation.t(`enum.category.${value}`, value.replace(/_/g, ' ')),
+        translation.t(`enum.category.${value}`, {
+          defaultValue: value.replace(/_/g, ' '),
+        }),
     }),
     [translation],
   );

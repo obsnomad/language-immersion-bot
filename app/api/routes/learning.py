@@ -25,6 +25,7 @@ async def post_practice_message(
             username=context.user.username,
             first_name=context.user.first_name,
             text=payload.text,
+            learning_language=context.learning_language,
         )
     except (SQLAlchemyError, ClientError, ConnectionError, TimeoutError, OSError) as error:
         raise HTTPException(
@@ -49,7 +50,10 @@ async def get_today_review(
     context: CurrentUserDep,
     services: ServicesDep,
 ) -> ReviewListResponse:
-    items = await services.mistake_service.list_due_for_review(user_id=context.user.id)
+    items = await services.mistake_service.list_due_for_review(
+        user_id=context.user.id,
+        language=context.learning_language,
+    )
     return ReviewListResponse(
         items=[
             ReviewItemResponse(

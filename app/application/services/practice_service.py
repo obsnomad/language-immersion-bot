@@ -6,7 +6,7 @@ from app.application.services.profile_service import ProfileService
 from app.application.services.session_service import SessionService
 from app.application.services.turn_service import TurnService
 from app.application.services.user_service import UserService
-from app.domain.enums import CorrectionMode
+from app.domain.enums import CorrectionMode, LanguageCode
 from app.domain.schemas import PracticeResult, SessionSnapshot
 from app.message_formatting import render_feedback_quote, render_markdown
 
@@ -40,16 +40,22 @@ class PracticeService:
         username: str | None,
         first_name: str | None,
         text: str,
+        learning_language: LanguageCode,
     ) -> PracticeResult:
         user = await self._user_service.get_or_create_user(
             telegram_id=telegram_id,
             username=username,
             first_name=first_name,
         )
-        profile = await self._profile_service.get_or_create_profile(user.id)
+        profile = await self._profile_service.get_or_create_profile(
+            user.id,
+            language=learning_language,
+        )
         route = await self._orchestrator.route(
             user_text=text,
             preferred_correction_mode=CorrectionMode(profile.feedback_style),
+            learning_language=learning_language,
+            support_language=profile.native_language,
         )
         session = await self._session_service.create_or_update_active_session(
             user_id=user.id,

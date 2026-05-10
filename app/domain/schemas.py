@@ -7,6 +7,7 @@ from app.domain.enums import AgentRole, CorrectionMode, LanguageCode, LearningMo
 
 class RouteDecision(BaseModel):
     language: LanguageCode = LanguageCode.ENGLISH
+    support_language: str = "ru"
     mode: LearningMode = LearningMode.CONVERSATION
     agent: AgentRole = AgentRole.CONVERSATION
     correction_mode: CorrectionMode = CorrectionMode.DELAYED

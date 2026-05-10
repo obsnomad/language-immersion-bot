@@ -37,3 +37,14 @@ async def test_routes_serbian_request() -> None:
     assert decision.language is LanguageCode.SERBIAN
     assert decision.mode is LearningMode.CONVERSATION
     assert decision.agent is AgentRole.CONVERSATION
+
+
+async def test_respects_explicit_learning_language_override() -> None:
+    orchestrator = LearningOrchestrator()
+
+    decision = await orchestrator.route(
+        user_text="Let's do conversation practice in Serbian.",
+        learning_language=LanguageCode.SPANISH,
+    )
+
+    assert decision.language is LanguageCode.SPANISH

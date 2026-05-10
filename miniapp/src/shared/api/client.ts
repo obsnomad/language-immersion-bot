@@ -1,3 +1,5 @@
+import { getActiveLearningLanguage } from '@/shared/language/runtime';
+
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export class ApiError extends Error {
@@ -19,11 +21,14 @@ export async function apiRequest<TResponse>(
   options: RequestOptions = {},
   accessToken: string | null = null,
 ): Promise<TResponse> {
+  const learningLanguage = getActiveLearningLanguage();
+
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: options.method || 'GET',
     headers: {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      'X-Language': learningLanguage,
       ...(options.headers || {}),
     },
     ...options,

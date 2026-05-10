@@ -43,4 +43,4 @@ def render_markdown(text: str) -> str:
 
 
 def render_feedback_quote(summary: str) -> str:
-    return f"-----\n<i>Feedback: {render_markdown(summary)}</i>"
+    return f"-----\n<b>Feedback:</b> {render_markdown(summary)}"

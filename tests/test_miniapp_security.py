@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 import pytest
 from telegram_init_data import sign
 
+from app.api.dependencies import get_learning_language
 from app.api.security import (
     MiniAppAuthError,
     SessionTokenSigner,
@@ -84,3 +85,11 @@ def test_parse_authorization_header_accepts_tma_scheme() -> None:
 def test_parse_authorization_header_rejects_unknown_scheme() -> None:
     with pytest.raises(MiniAppAuthError, match="Unsupported"):
         parse_authorization_header("basic abc123")
+
+
+def test_get_learning_language_defaults_to_english() -> None:
+    assert get_learning_language() == "en"
+
+
+def test_get_learning_language_accepts_supported_value() -> None:
+    assert get_learning_language("es") == "es"

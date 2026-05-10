@@ -1,17 +1,24 @@
 import { useEffect, useState } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 
-import { ConversationPage } from '@/pages/conversation/ui/ConversationPage';
-import { DashboardPage } from '@/pages/dashboard/ui/DashboardPage';
-import { RepeatWordsPage } from '@/pages/repeat-words/ui/RepeatWordsPage';
+import { HomePage } from '@/pages/home/ui/HomePage';
+import { PracticePage } from '@/pages/practice/ui/PracticePage';
+import { ProgressPage } from '@/pages/progress/ui/ProgressPage';
 import { ReviewPage } from '@/pages/review/ui/ReviewPage';
+import { SettingsPage } from '@/pages/settings/ui/SettingsPage';
 import { useAppI18n } from '@/shared/i18n/useAppI18n';
 import {
   getTelegramThemeSettings,
   subscribeToTelegramThemeChange,
 } from '@/shared/telegram/telegram';
 import { Layout } from '@/shared/ui/layout/Layout';
-import { ChatOutlined, HomeOutlined, ListOutlined, RepeatOutlined } from '@mui/icons-material';
+import {
+  AutoGraphRounded,
+  CottageRounded,
+  PsychologyRounded,
+  SettingsRounded,
+  SportsEsportsRounded,
+} from '@mui/icons-material';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 
 import { createAppTheme } from './theme';
@@ -33,35 +40,52 @@ export const App = () => {
               <Layout
                 tabs={[
                   {
-                    id: 'dashboard',
-                    label: t('nav.dashboard'),
-                    icon: <HomeOutlined />,
-                    path: '/dashboard',
-                  },
-                  { id: 'review', label: t('nav.review'), icon: <ListOutlined />, path: '/review' },
-                  {
-                    id: 'conversation',
-                    label: t('nav.conversation'),
-                    icon: <ChatOutlined />,
-                    path: '/conversation',
+                    id: 'home',
+                    label: t('nav.home'),
+                    icon: <CottageRounded />,
+                    path: '/home',
+                    matchPaths: ['/home'],
                   },
                   {
-                    id: 'repeat-words',
-                    label: t('nav.repeatWords'),
-                    icon: <RepeatOutlined />,
-                    path: '/repeat-words',
+                    id: 'practice',
+                    label: t('nav.practice'),
+                    icon: <SportsEsportsRounded />,
+                    path: '/practice',
+                    matchPaths: ['/practice'],
+                  },
+                  {
+                    id: 'review',
+                    label: t('nav.review'),
+                    icon: <PsychologyRounded />,
+                    path: '/review',
+                    matchPaths: ['/review'],
+                  },
+                  {
+                    id: 'progress',
+                    label: t('nav.progress'),
+                    icon: <AutoGraphRounded />,
+                    path: '/progress',
+                    matchPaths: ['/progress'],
+                  },
+                  {
+                    id: 'settings',
+                    label: t('nav.settings'),
+                    icon: <SettingsRounded />,
+                    path: '/settings',
+                    matchPaths: ['/settings'],
                   },
                 ]}
               />
             }
           >
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
+            <Route index element={<Navigate to="/home" replace />} />
+            <Route path="home" element={<HomePage />} />
+            <Route path="practice" element={<PracticePage />} />
             <Route path="review" element={<ReviewPage />} />
-            <Route path="conversation" element={<ConversationPage />} />
-            <Route path="repeat-words" element={<RepeatWordsPage />} />
+            <Route path="progress" element={<ProgressPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </HashRouter>
     </ThemeProvider>

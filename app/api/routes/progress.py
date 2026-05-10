@@ -11,12 +11,24 @@ async def get_progress_summary(
     context: CurrentUserDep,
     services: ServicesDep,
 ) -> ProgressSummaryResponse:
-    sessions_total = await services.session_service.count_for_user(user_id=context.user.id)
-    open_mistakes = await services.mistake_service.count_open(user_id=context.user.id)
-    review_due_now = len(
-        await services.mistake_service.list_due_for_review(user_id=context.user.id)
+    sessions_total = await services.session_service.count_for_user(
+        user_id=context.user.id,
+        language=context.learning_language,
     )
-    recent_sessions = await services.session_service.list_recent(user_id=context.user.id)
+    open_mistakes = await services.mistake_service.count_open(
+        user_id=context.user.id,
+        language=context.learning_language,
+    )
+    review_due_now = len(
+        await services.mistake_service.list_due_for_review(
+            user_id=context.user.id,
+            language=context.learning_language,
+        )
+    )
+    recent_sessions = await services.session_service.list_recent(
+        user_id=context.user.id,
+        language=context.learning_language,
+    )
     return ProgressSummaryResponse(
         sessions_total=sessions_total,
         open_mistakes=open_mistakes,

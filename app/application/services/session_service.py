@@ -21,13 +21,13 @@ class SessionService:
             result = await session.execute(
                 select(LearningSession).where(
                     LearningSession.user_id == user_id,
+                    LearningSession.language == language.value,
                     LearningSession.status == SessionStatus.ACTIVE.value,
                 )
             )
             active_session = result.scalar_one_or_none()
 
             if active_session:
-                active_session.language = language.value
                 active_session.mode = mode.value
                 active_session.agent_role = agent_role.value
                 active_session.correction_mode = correction_mode.value
@@ -51,19 +51,36 @@ class SessionService:
             await session.refresh(learning_session)
             return learning_session
 
-    async def list_recent(self, *, user_id: int, limit: int = 5) -> list[LearningSession]:
+    async def list_recent(
+        self,
+        *,
+        user_id: int,
+        language: LanguageCode,
+        limit: int = 5,
+    ) -> list[LearningSession]:
         async with SessionLocal() as session:
             result = await session.execute(
                 select(LearningSession)
-                .where(LearningSession.user_id == user_id)
+                .where(
+                    LearningSession.user_id == user_id,
+                    LearningSession.language == language.value,
+                )
                 .order_by(desc(LearningSession.started_at))
                 .limit(limit)
             )
             return list(result.scalars().all())
 
-    async def count_for_user(self, *, user_id: int) -> int:
+    async def count_for_user(
+        self,
+        *,
+        user_id: int,
+        language: LanguageCode,
+    ) -> int:
         async with SessionLocal() as session:
             result = await session.execute(
-                select(func.count(LearningSession.id)).where(LearningSession.user_id == user_id)
+                select(func.count(LearningSession.id)).where(
+                    LearningSession.user_id == user_id,
+                    LearningSession.language == language.value,
+                )
             )
             return int(result.scalar_one())
