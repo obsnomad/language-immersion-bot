@@ -35,12 +35,50 @@ interface ModeOption {
 }
 
 const MODES: ModeOption[] = [
-  { id: 'conversation', mode: 'conversation', label: 'Conversation', description: 'Open-ended tutor chat', icon: <MicIcon /> },
-  { id: 'roleplay', mode: 'scenario', label: 'Roleplay', description: 'Practice a real-world situation', promptPrefix: 'Roleplay scenario:', icon: <RecordVoiceOverIcon /> },
-  { id: 'interview', mode: 'exam', label: 'Interview', description: 'Answer structured questions', promptPrefix: 'Interview practice:', icon: <SchoolIcon /> },
-  { id: 'grammar', mode: 'grammar', label: 'Grammar', description: 'Rules, examples, and drills', icon: <SchoolIcon /> },
-  { id: 'vocabulary', mode: 'vocabulary', label: 'Vocabulary', description: 'Learn and reuse new words', icon: <SchoolIcon /> },
-  { id: 'writing', mode: 'writing', label: 'Writing', description: 'Improve longer written answers', icon: <SchoolIcon /> },
+  {
+    id: 'conversation',
+    mode: 'conversation',
+    label: 'Conversation',
+    description: 'Open-ended tutor chat',
+    icon: <MicIcon />,
+  },
+  {
+    id: 'roleplay',
+    mode: 'scenario',
+    label: 'Roleplay',
+    description: 'Practice a real-world situation',
+    promptPrefix: 'Roleplay scenario:',
+    icon: <RecordVoiceOverIcon />,
+  },
+  {
+    id: 'interview',
+    mode: 'exam',
+    label: 'Interview',
+    description: 'Answer structured questions',
+    promptPrefix: 'Interview practice:',
+    icon: <SchoolIcon />,
+  },
+  {
+    id: 'grammar',
+    mode: 'grammar',
+    label: 'Grammar',
+    description: 'Rules, examples, and drills',
+    icon: <SchoolIcon />,
+  },
+  {
+    id: 'vocabulary',
+    mode: 'vocabulary',
+    label: 'Vocabulary',
+    description: 'Learn and reuse new words',
+    icon: <SchoolIcon />,
+  },
+  {
+    id: 'writing',
+    mode: 'writing',
+    label: 'Writing',
+    description: 'Improve longer written answers',
+    icon: <SchoolIcon />,
+  },
 ];
 
 const SCENARIOS = ['job interview', 'airport', 'doctor', 'renting apartment', 'small talk'];
@@ -57,7 +95,8 @@ export function PracticePage() {
   const { token, language, isAuthorized } = useAuth();
   const searchParams = useSearchParams();
   const requestedMode = searchParams.get('mode');
-  const initialMode = MODES.find((m) => m.id === requestedMode || m.mode === requestedMode)?.id ?? 'conversation';
+  const initialMode =
+    MODES.find((m) => m.id === requestedMode || m.mode === requestedMode)?.id ?? 'conversation';
   const [modeId, setModeId] = useState(initialMode);
   const [scenario, setScenario] = useState<string | null>(null);
   const [input, setInput] = useState('');
@@ -129,7 +168,9 @@ export function PracticePage() {
       activeMode.promptPrefix,
       showScenarios && scenario ? `Scenario: ${scenario}` : null,
       activeMode.mode !== 'conversation' ? `Mode: ${activeMode.mode}` : null,
-    ].filter(Boolean).join(' ');
+    ]
+      .filter(Boolean)
+      .join(' ');
     const text = prefix ? `${prefix}\n${input}` : input;
 
     const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: input };
@@ -162,7 +203,11 @@ export function PracticePage() {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { id: (Date.now() + 1).toString(), role: 'assistant', content: 'Something went wrong. Please try again.' },
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Something went wrong. Please try again.',
+        },
       ]);
     } finally {
       setLoading(false);
@@ -175,11 +220,7 @@ export function PracticePage() {
       <Box className={styles.toolbar}>
         <FormControl size="small" className={styles.modeSelect}>
           <InputLabel>Mode</InputLabel>
-          <Select
-            value={modeId}
-            label="Mode"
-            onChange={(event) => setModeId(event.target.value)}
-          >
+          <Select value={modeId} label="Mode" onChange={(event) => setModeId(event.target.value)}>
             {MODES.map((mode) => (
               <MenuItem key={mode.id} value={mode.id}>
                 {mode.label}
@@ -230,7 +271,9 @@ export function PracticePage() {
         {historyLoading ? (
           <Box className={styles.typingIndicator}>
             <CircularProgress size={14} />
-            <Typography variant="caption" color="text.secondary">Loading history...</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Loading history...
+            </Typography>
           </Box>
         ) : messages.length === 0 ? (
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 4 }}>
@@ -242,7 +285,9 @@ export function PracticePage() {
         {loading && (
           <Box className={styles.typingIndicator}>
             <CircularProgress size={14} />
-            <Typography variant="caption" color="text.secondary">Tutor is typing...</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Tutor is typing...
+            </Typography>
           </Box>
         )}
         <div ref={bottomRef} />
@@ -322,9 +367,16 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
               <Divider sx={{ my: 1 }} />
               {msg.mistakes.map((m, i) => (
                 <Box key={i} sx={{ mt: 0.5 }}>
-                  <Chip label={m.type} size="small" color={m.severity >= 4 ? 'error' : 'warning'} sx={{ mb: 0.5 }} />
+                  <Chip
+                    label={m.type}
+                    size="small"
+                    color={m.severity >= 4 ? 'error' : 'warning'}
+                    sx={{ mb: 0.5 }}
+                  />
                   <Typography variant="caption" display="block">
-                    <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>{m.sourceText}</span>
+                    <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>
+                      {m.sourceText}
+                    </span>
                     {' -> '}
                     <strong>{m.correction}</strong>
                   </Typography>

@@ -1,8 +1,27 @@
 export type LanguageCode = 'en' | 'es' | 'sr';
-export type LearningMode = 'conversation' | 'scenario' | 'grammar' | 'vocabulary' | 'writing' | 'exam' | 'review';
-export type AgentRole = 'conversation_agent' | 'teacher_agent' | 'examiner_agent' | 'feedback_agent' | 'review_agent';
+export type LearningMode =
+  | 'conversation'
+  | 'scenario'
+  | 'grammar'
+  | 'vocabulary'
+  | 'writing'
+  | 'exam'
+  | 'review';
+export type AgentRole =
+  | 'conversation_agent'
+  | 'teacher_agent'
+  | 'examiner_agent'
+  | 'feedback_agent'
+  | 'review_agent';
 export type CorrectionMode = 'inline' | 'delayed' | 'critical_only';
-export type MistakeType = 'grammar' | 'vocabulary' | 'tense' | 'preposition' | 'agreement' | 'word_order' | 'style';
+export type MistakeType =
+  | 'grammar'
+  | 'vocabulary'
+  | 'tense'
+  | 'preposition'
+  | 'agreement'
+  | 'word_order'
+  | 'style';
 export type SessionStatus = 'active' | 'completed';
 export type FeedbackStyle = 'inline' | 'delayed' | 'critical_only';
 export type LanguageLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';

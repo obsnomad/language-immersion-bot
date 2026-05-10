@@ -52,51 +52,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (userRes.ok) setUser(await userRes.json());
   }, []);
 
-  const authenticate = useCallback(async (lang: LanguageCode) => {
-    const stored = localStorage.getItem('session_token');
-    const expiry = localStorage.getItem('session_expiry');
+  const authenticate = useCallback(
+    async (lang: LanguageCode) => {
+      const stored = localStorage.getItem('session_token');
+      const expiry = localStorage.getItem('session_expiry');
 
-    if (stored && expiry && Date.now() < parseInt(expiry, 10)) {
-      setToken(stored);
-      try {
-        await hydrateSession(stored, lang);
+      if (stored && expiry && Date.now() < parseInt(expiry, 10)) {
+        setToken(stored);
+        try {
+          await hydrateSession(stored, lang);
+          setIsLoading(false);
+          return;
+        } catch {
+          localStorage.removeItem('session_token');
+          localStorage.removeItem('session_expiry');
+          setToken(null);
+          setUser(null);
+          setProfile(null);
+        }
+      }
+
+      if (!initData) {
         setIsLoading(false);
         return;
-      } catch {
-        localStorage.removeItem('session_token');
-        localStorage.removeItem('session_expiry');
-        setToken(null);
-        setUser(null);
-        setProfile(null);
       }
-    }
 
-    if (!initData) {
-      setIsLoading(false);
-      return;
-    }
+      try {
+        const res = await fetch('/api/auth/telegram-mini-app', {
+          method: 'POST',
+          headers: { Authorization: `tma ${initData}`, 'X-Language': lang },
+        });
 
-    try {
-      const res = await fetch('/api/auth/telegram-mini-app', {
-        method: 'POST',
-        headers: { Authorization: `tma ${initData}`, 'X-Language': lang },
-      });
+        if (!res.ok) throw new Error('auth failed');
 
-      if (!res.ok) throw new Error('auth failed');
-
-      const data = await res.json();
-      const ttl = 86400 * 1000;
-      localStorage.setItem('session_token', data.token);
-      localStorage.setItem('session_expiry', String(Date.now() + ttl));
-      setToken(data.token);
-      setUser(data.user);
-      setProfile(data.profile);
-    } catch (err) {
-      console.error('TMA auth failed:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [hydrateSession, initData]);
+        const data = await res.json();
+        const ttl = 86400 * 1000;
+        localStorage.setItem('session_token', data.token);
+        localStorage.setItem('session_expiry', String(Date.now() + ttl));
+        setToken(data.token);
+        setUser(data.user);
+        setProfile(data.profile);
+      } catch (err) {
+        console.error('TMA auth failed:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [hydrateSession, initData],
+  );
 
   useEffect(() => {
     if (!isReady) return;

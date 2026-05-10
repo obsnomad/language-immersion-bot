@@ -54,7 +54,9 @@ export function ReviewPage() {
   async function refreshDue() {
     if (!token) return;
     setLoadingDue(true);
-    const items = await fetch('/api/learning/review/today', { headers: authHeaders }).then((res) => res.json());
+    const items = await fetch('/api/learning/review/today', { headers: authHeaders }).then((res) =>
+      res.json(),
+    );
     setDueItems(Array.isArray(items) ? items : []);
     setLoadingDue(false);
   }
@@ -65,7 +67,9 @@ export function ReviewPage() {
   return (
     <Box className={styles.page}>
       <Box className={styles.header}>
-        <Typography variant="h6" fontWeight={700}>Review</Typography>
+        <Typography variant="h6" fontWeight={700}>
+          Review
+        </Typography>
         <IconButton size="small" onClick={refreshDue} disabled={loadingDue || !isAuthorized}>
           <RefreshIcon fontSize="small" />
         </IconButton>
@@ -104,13 +108,17 @@ export function ReviewPage() {
         <EmptyState
           message={
             isAuthorized
-              ? tab === 0 ? 'Nothing due right now. Keep practising!' : 'No open mistakes yet.'
+              ? tab === 0
+                ? 'Nothing due right now. Keep practising!'
+                : 'No open mistakes yet.'
               : 'Open this mini-app from Telegram to load review items.'
           }
         />
       ) : (
         <div className={styles.list}>
-          {items.map((item) => <MistakeCard key={item.id} item={item} />)}
+          {items.map((item) => (
+            <MistakeCard key={item.id} item={item} />
+          ))}
         </div>
       )}
     </Box>

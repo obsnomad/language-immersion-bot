@@ -8,7 +8,13 @@ interface FeedbackResult {
 }
 
 const VALID_TYPES = new Set<MistakeType>([
-  'grammar', 'vocabulary', 'tense', 'preposition', 'agreement', 'word_order', 'style',
+  'grammar',
+  'vocabulary',
+  'tense',
+  'preposition',
+  'agreement',
+  'word_order',
+  'style',
 ]);
 
 export async function analyzeText(

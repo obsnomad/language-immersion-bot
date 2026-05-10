@@ -1,5 +1,6 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 import { AuthProvider } from '@/components/providers/AuthProvider';
@@ -22,10 +23,20 @@ function LoadingScreen() {
 function AppContent({ children }: { children: React.ReactNode }) {
   const { isLoading } = useAuth();
   const theme = useTheme();
+  const paletteVars = {
+    '--app-palette-background-default': theme.palette.background.default,
+    '--app-palette-background-paper': theme.palette.background.paper,
+    '--app-palette-text-primary': theme.palette.text.primary,
+    '--app-palette-text-secondary': theme.palette.text.secondary,
+    '--app-palette-primary-main': theme.palette.primary.main,
+    '--app-palette-divider': theme.palette.divider,
+    '--app-palette-action-hover': theme.palette.action.hover,
+  } as CSSProperties;
 
   return (
     <Box
       className={styles.shell}
+      style={paletteVars}
       sx={{
         bgcolor: 'background.default',
         color: 'text.primary',

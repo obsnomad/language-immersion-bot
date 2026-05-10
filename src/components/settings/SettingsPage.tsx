@@ -86,7 +86,9 @@ export function SettingsPage() {
 
   return (
     <Box className={styles.page}>
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Settings</Typography>
+      <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
+        Settings
+      </Typography>
 
       <div className={styles.infoGrid}>
         <Card>
@@ -118,8 +120,16 @@ export function SettingsPage() {
             titleTypographyProps={{ variant: 'subtitle1', fontWeight: 600 }}
           />
           <CardContent sx={{ pt: 0 }} className={styles.infoList}>
-            <Chip icon={<NotificationsIcon />} label="Reminders: 19:00" sx={{ width: 'fit-content' }} />
-            <Chip icon={<TrackChangesIcon />} label="Timezone: Europe/Moscow" sx={{ width: 'fit-content' }} />
+            <Chip
+              icon={<NotificationsIcon />}
+              label="Reminders: 19:00"
+              sx={{ width: 'fit-content' }}
+            />
+            <Chip
+              icon={<TrackChangesIcon />}
+              label="Timezone: Europe/Moscow"
+              sx={{ width: 'fit-content' }}
+            />
             <Chip icon={<DarkModeIcon />} label="Theme: adaptive" sx={{ width: 'fit-content' }} />
           </CardContent>
         </Card>
@@ -172,7 +182,9 @@ export function SettingsPage() {
               onChange={(e) => setNativeLang(e.target.value)}
             >
               {NATIVE_LANGUAGES.map((l) => (
-                <MenuItem key={l.value} value={l.value}>{l.label}</MenuItem>
+                <MenuItem key={l.value} value={l.value}>
+                  {l.label}
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -203,7 +215,9 @@ export function SettingsPage() {
               onChange={(e) => setFeedbackStyle(e.target.value as FeedbackStyle)}
             >
               {FEEDBACK_STYLES.map((s) => (
-                <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
+                <MenuItem key={s.value} value={s.value}>
+                  {s.label}
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -225,7 +239,15 @@ export function SettingsPage() {
             size="large"
             onClick={save}
             disabled={saving || !isAuthorized}
-            startIcon={saved ? <CheckIcon /> : saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+            startIcon={
+              saved ? (
+                <CheckIcon />
+              ) : saving ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <SaveIcon />
+              )
+            }
             sx={{ borderRadius: 2 }}
           >
             {saved ? 'Saved!' : saving ? 'Saving...' : 'Save changes'}

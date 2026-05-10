@@ -29,7 +29,12 @@ interface TelegramCtx {
   isReady: boolean;
 }
 
-const Ctx = createContext<TelegramCtx>({ twa: null, initData: null, colorScheme: 'light', isReady: false });
+const Ctx = createContext<TelegramCtx>({
+  twa: null,
+  initData: null,
+  colorScheme: 'light',
+  isReady: false,
+});
 
 export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<TelegramCtx>({

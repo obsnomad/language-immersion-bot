@@ -12,7 +12,6 @@ function buildTheme(colorScheme: 'light' | 'dark', themeParams: Record<string, s
   const isDark = colorScheme === 'dark';
 
   return createTheme({
-    cssVariables: true,
     palette: {
       mode: isDark ? 'dark' : 'light',
       primary: {
@@ -75,7 +74,14 @@ export function ThemeRegistry({ children }: { children: React.ReactNode }) {
       if (c.inserted[serialized.name] === undefined) inserted.push(serialized.name);
       return prevInsert(...args);
     };
-    return { cache: c, flush: () => { const p = inserted; inserted = []; return p; } };
+    return {
+      cache: c,
+      flush: () => {
+        const p = inserted;
+        inserted = [];
+        return p;
+      },
+    };
   });
 
   useServerInsertedHTML(() => {

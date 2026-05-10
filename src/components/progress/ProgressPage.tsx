@@ -23,7 +23,11 @@ interface Skills {
   confidence: number;
 }
 
-const SKILLS: Array<{ key: keyof Skills; label: string; color: 'primary' | 'secondary' | 'success' | 'warning' }> = [
+const SKILLS: Array<{
+  key: keyof Skills;
+  label: string;
+  color: 'primary' | 'secondary' | 'success' | 'warning';
+}> = [
   { key: 'fluency', label: 'Fluency', color: 'primary' },
   { key: 'grammar', label: 'Grammar', color: 'warning' },
   { key: 'vocabulary', label: 'Vocabulary', color: 'success' },
@@ -79,25 +83,47 @@ export function ProgressPage() {
       )}
 
       <div className={styles.statsGrid}>
-        <StatCard label="Sessions" value={summary?.sessionCount} loading={loading} color="primary.main" />
-        <StatCard label="Open mistakes" value={summary?.openMistakes} loading={loading} color="warning.main" />
-        <StatCard label="Due review" value={isAuthorized ? summary?.reviewDue : 0} loading={loading} color="success.main" />
+        <StatCard
+          label="Sessions"
+          value={summary?.sessionCount}
+          loading={loading}
+          color="primary.main"
+        />
+        <StatCard
+          label="Open mistakes"
+          value={summary?.openMistakes}
+          loading={loading}
+          color="warning.main"
+        />
+        <StatCard
+          label="Due review"
+          value={isAuthorized ? summary?.reviewDue : 0}
+          loading={loading}
+          color="success.main"
+        />
       </div>
 
       <div className={styles.twoColumn}>
         <Card>
-          <CardHeader title="Skills" titleTypographyProps={{ variant: 'subtitle1', fontWeight: 600 }} />
+          <CardHeader
+            title="Skills"
+            titleTypographyProps={{ variant: 'subtitle1', fontWeight: 600 }}
+          />
           <CardContent sx={{ pt: 0 }}>
             {loading ? (
               <div className={styles.skillsList}>
-                {[1, 2, 3, 4].map((i) => <Skeleton key={i} height={48} />)}
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} height={48} />
+                ))}
               </div>
             ) : (
               <div className={styles.skillsList}>
                 {SKILLS.map(({ key, label, color }) => (
                   <Box key={key}>
                     <Box className={styles.skillRow}>
-                      <Typography variant="body2" fontWeight={500}>{label}</Typography>
+                      <Typography variant="body2" fontWeight={500}>
+                        {label}
+                      </Typography>
                       <Typography variant="body2" color="text.secondary">
                         {skills[key]}%
                       </Typography>
@@ -116,25 +142,38 @@ export function ProgressPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Top mistakes" titleTypographyProps={{ variant: 'subtitle1', fontWeight: 600 }} />
+          <CardHeader
+            title="Top mistakes"
+            titleTypographyProps={{ variant: 'subtitle1', fontWeight: 600 }}
+          />
           <CardContent sx={{ pt: 0 }}>
             <div className={styles.topicList}>
-              {(weakTopics.length ? weakTopics : ['grammar', 'prepositions', 'articles']).map((topic) => (
-                <Chip key={topic} icon={<BarChartIcon />} label={topic} variant="outlined" />
-              ))}
+              {(weakTopics.length ? weakTopics : ['grammar', 'prepositions', 'articles']).map(
+                (topic) => (
+                  <Chip key={topic} icon={<BarChartIcon />} label={topic} variant="outlined" />
+                ),
+              )}
             </div>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Review completion rate: {summary?.reviewDue ? Math.max(100 - reviewItems.length * 10, 20) : 100}%
+              Review completion rate:{' '}
+              {summary?.reviewDue ? Math.max(100 - reviewItems.length * 10, 20) : 100}%
             </Typography>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader title="Recent sessions" titleTypographyProps={{ variant: 'subtitle1', fontWeight: 600 }} />
+        <CardHeader
+          title="Recent sessions"
+          titleTypographyProps={{ variant: 'subtitle1', fontWeight: 600 }}
+        />
         <CardContent sx={{ pt: 0 }}>
           {loading ? (
-            <>{[1, 2, 3].map((i) => <Skeleton key={i} height={40} sx={{ my: 0.25 }} />)}</>
+            <>
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} height={40} sx={{ my: 0.25 }} />
+              ))}
+            </>
           ) : !summary?.recentSessions?.length ? (
             <Typography variant="body2" color="text.secondary">
               No sessions yet. Start practising!
@@ -203,9 +242,13 @@ function StatCard({
         {loading ? (
           <Skeleton width={48} height={40} sx={{ mx: 'auto' }} />
         ) : (
-          <Typography variant="h4" fontWeight={700} color={color}>{value ?? 0}</Typography>
+          <Typography variant="h4" fontWeight={700} color={color}>
+            {value ?? 0}
+          </Typography>
         )}
-        <Typography variant="caption" color="text.secondary">{label}</Typography>
+        <Typography variant="caption" color="text.secondary">
+          {label}
+        </Typography>
       </CardContent>
     </Card>
   );

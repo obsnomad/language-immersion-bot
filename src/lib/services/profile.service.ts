@@ -10,10 +10,7 @@ export async function getOrCreateProfile(userId: string, language: LanguageCode)
 
   if (existing) return existing;
 
-  const [created] = await db
-    .insert(languageProfiles)
-    .values({ userId, language })
-    .returning();
+  const [created] = await db.insert(languageProfiles).values({ userId, language }).returning();
   return created;
 }
 
@@ -26,7 +23,15 @@ export async function getProfile(userId: string, language: LanguageCode) {
 type ProfileUpdate = {
   nativeLanguage?: string;
   currentLevel?: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' | null;
-  preferredMode?: 'conversation' | 'scenario' | 'grammar' | 'vocabulary' | 'writing' | 'exam' | 'review' | null;
+  preferredMode?:
+    | 'conversation'
+    | 'scenario'
+    | 'grammar'
+    | 'vocabulary'
+    | 'writing'
+    | 'exam'
+    | 'review'
+    | null;
   feedbackStyle?: 'inline' | 'delayed' | 'critical_only';
   goals?: string | null;
 };

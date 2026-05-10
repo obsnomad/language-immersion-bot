@@ -11,14 +11,30 @@ import {
 
 export const languageCodeEnum = pgEnum('language_code', ['en', 'es', 'sr']);
 export const learningModeEnum = pgEnum('learning_mode', [
-  'conversation', 'scenario', 'grammar', 'vocabulary', 'writing', 'exam', 'review',
+  'conversation',
+  'scenario',
+  'grammar',
+  'vocabulary',
+  'writing',
+  'exam',
+  'review',
 ]);
 export const agentRoleEnum = pgEnum('agent_role', [
-  'conversation_agent', 'teacher_agent', 'examiner_agent', 'feedback_agent', 'review_agent',
+  'conversation_agent',
+  'teacher_agent',
+  'examiner_agent',
+  'feedback_agent',
+  'review_agent',
 ]);
 export const correctionModeEnum = pgEnum('correction_mode', ['inline', 'delayed', 'critical_only']);
 export const mistakeTypeEnum = pgEnum('mistake_type', [
-  'grammar', 'vocabulary', 'tense', 'preposition', 'agreement', 'word_order', 'style',
+  'grammar',
+  'vocabulary',
+  'tense',
+  'preposition',
+  'agreement',
+  'word_order',
+  'style',
 ]);
 export const sessionStatusEnum = pgEnum('session_status', ['active', 'completed']);
 export const mistakeStatusEnum = pgEnum('mistake_status', ['open', 'resolved']);

@@ -1,8 +1,5 @@
 function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function escapeAttribute(value: string): string {
@@ -38,13 +35,10 @@ export function markdownToHtml(markdown: string): string {
 
   text = escapeHtml(text);
 
-  text = text.replace(
-    /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    (_match, label, url) => {
-      if (!isSafeUrl(url)) return label;
-      return `<a href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">${label}</a>`;
-    },
-  );
+  text = text.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_match, label, url) => {
+    if (!isSafeUrl(url)) return label;
+    return `<a href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">${label}</a>`;
+  });
 
   text = text.replace(/^#{1,6}\s+(.+)$/gm, '<strong>$1</strong>');
   text = text.replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>');
