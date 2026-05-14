@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Audio too large (max 10 MB)' }, { status: 413 });
 
   const language = request.headers.get('x-language') ?? 'en';
+  console.log('language set is', language);
   const whisperUrl = process.env.WHISPER_URL ?? 'http://localhost:9000';
 
   const upstream = new FormData();
