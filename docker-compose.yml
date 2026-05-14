@@ -24,6 +24,15 @@ services:
     volumes:
       - redis_data:/data
 
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    container_name: ai_language_bot_whisper
+    environment:
+      ASR_MODEL: base
+      ASR_ENGINE: openai_whisper
+    ports:
+      - '9000:9000'
+
 volumes:
   pgdata:
   redis_data:

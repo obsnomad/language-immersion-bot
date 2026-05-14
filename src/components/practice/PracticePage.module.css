@@ -140,6 +140,21 @@
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
 }
 
+@keyframes micPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(229, 57, 53, 0);
+  }
+}
+
+.micButtonRecording {
+  animation: micPulse 1.2s ease-in-out infinite;
+  border-radius: 50% !important;
+}
+
 @media (max-width: 700px) {
   .toolbar {
     align-items: stretch;
