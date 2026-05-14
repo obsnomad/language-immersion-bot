@@ -6,6 +6,7 @@ import { useTheme } from '@mui/material/styles';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { BottomNav } from './BottomNav';
+import { LanguageOnboardingDialog } from '@/components/onboarding/LanguageOnboardingDialog';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import styles from './AppShell.module.css';
@@ -47,6 +48,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         {isLoading ? <LoadingScreen /> : children}
       </Box>
       <BottomNav />
+      <LanguageOnboardingDialog />
     </Box>
   );
 }
