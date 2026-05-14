@@ -113,8 +113,22 @@ export const mistakes = pgTable('mistakes', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const audioLogs = pgTable('audio_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  language: text('language').notNull(),
+  audioBytes: integer('audio_bytes').notNull(),
+  whisperMs: integer('whisper_ms').notNull(),
+  empty: text('empty').notNull().default('false'),
+  error: text('error'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export type DbUser = typeof users.$inferSelect;
 export type DbLanguageProfile = typeof languageProfiles.$inferSelect;
 export type DbLearningSession = typeof learningSessions.$inferSelect;
 export type DbMessageTurn = typeof messageTurns.$inferSelect;
 export type DbMistake = typeof mistakes.$inferSelect;
+export type DbAudioLog = typeof audioLogs.$inferSelect;
