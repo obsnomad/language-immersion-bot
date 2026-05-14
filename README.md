@@ -9,7 +9,8 @@ routes, bot webhook, persistence, and LLM orchestration all run from the same Ty
 - Supports English, Spanish, and Serbian learning profiles.
 - Routes messages into conversation, scenario, grammar, vocabulary, writing, exam, and review modes.
 - Uses Mistral-backed specialist prompts for tutoring, feedback, review drills, and exam-style practice.
-- Stores users, language profiles, sessions, message history, and mistakes in PostgreSQL.
+- Supports voice input via a mic button in the Practice page — audio is transcribed by a local Whisper container and post-processed by Mistral.
+- Stores users, language profiles, sessions, message history, mistakes, and audio transcription logs in PostgreSQL.
 - Authenticates Mini App users with Telegram init data and issues JWT session tokens.
 - Exposes a grammY webhook endpoint for Telegram bot messages.
 
@@ -23,6 +24,7 @@ routes, bot webhook, persistence, and LLM orchestration all run from the same Ty
 - Drizzle ORM + drizzle-kit
 - PostgreSQL
 - Vercel AI SDK + Mistral provider
+- Whisper (via `onerahmet/openai-whisper-asr-webservice`) for local speech-to-text
 - jose for JWT sessions
 - Zod for request validation
 
@@ -41,6 +43,7 @@ Required values:
 - `SESSION_SECRET`
 - `MISTRAL_API_KEY`
 - `DATABASE_URL`, or the individual `POSTGRES_*` values
+- `WHISPER_URL` (defaults to `http://localhost:9000` — set if Whisper runs elsewhere)
 
 For local Docker Postgres, these defaults match `docker-compose.yml`:
 
@@ -61,10 +64,16 @@ Install dependencies:
 npm install
 ```
 
-Start local infrastructure:
+Start local infrastructure (PostgreSQL, Redis, and Whisper):
 
 ```bash
 docker compose up -d
+```
+
+The Whisper container (`ai_language_bot_whisper`) downloads the `base` model on first start (~140 MB) and exposes a transcription API on port 9000. This may take a few minutes. Check readiness with:
+
+```bash
+docker logs ai_language_bot_whisper
 ```
 
 Apply the Drizzle schema:
@@ -140,6 +149,7 @@ The script reads:
 - `GET /api/profile`
 - `PATCH /api/profile`
 - `POST /api/learning/session/message`
+- `POST /api/learning/session/transcribe`
 - `GET /api/learning/session/history`
 - `GET /api/learning/review/today`
 - `GET /api/learning/mistakes`
@@ -177,13 +187,14 @@ src/
   types/               shared TypeScript domain types
 scripts/
   set-webhook.mjs      Telegram webhook setup
-docker-compose.yml     local PostgreSQL and Redis
+docker-compose.yml     local PostgreSQL, Redis, and Whisper
 drizzle.config.ts      Drizzle Kit configuration
 ```
 
 ## Notes
 
-- Redis is still provisioned by Docker Compose, but the current request flow uses PostgreSQL-backed sessions and
-  mistakes.
+- Redis is still provisioned by Docker Compose, but the current request flow uses PostgreSQL-backed sessions and mistakes.
+- Whisper runs the `base` model by default. Change `ASR_MODEL` in `docker-compose.yml` to `medium` for better accuracy (~1.5 GB download, ~2 GB RAM).
+- Voice transcription timing and errors are logged to the `audio_logs` table for observability.
 - Telegram injects theme CSS variables into the root document. The root layout suppresses hydration warnings for those
   expected Telegram-side mutations.
