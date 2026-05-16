@@ -109,6 +109,7 @@ export function PracticePage() {
   const [micError, setMicError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const micStreamRef = useRef<MediaStream | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -166,6 +167,12 @@ export function PracticePage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, historyLoading]);
+
+  useEffect(() => {
+    return () => {
+      micStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   async function send() {
     if (!input.trim() || !token || loading) return;
@@ -230,12 +237,15 @@ export function PracticePage() {
     }
     if (micState === 'transcribing') return;
 
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      setMicError('Microphone permission denied');
-      return;
+    let stream = micStreamRef.current;
+    if (!stream || stream.getTracks().every((t) => t.readyState === 'ended')) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micStreamRef.current = stream;
+      } catch {
+        setMicError('Microphone permission denied');
+        return;
+      }
     }
 
     const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -251,7 +261,6 @@ export function PracticePage() {
     };
 
     recorder.onstop = async () => {
-      stream.getTracks().forEach((t) => t.stop());
       const blob = new Blob(audioChunksRef.current, { type: mimeType });
       audioChunksRef.current = [];
 
