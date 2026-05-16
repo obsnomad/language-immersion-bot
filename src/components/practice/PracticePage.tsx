@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Tooltip from '@mui/material/Tooltip';
 import { useSearchParams } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -103,6 +104,12 @@ export function PracticePage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [loading, setLoading] = useState(false);
+  type MicState = 'idle' | 'recording' | 'transcribing';
+  const [micState, setMicState] = useState<MicState>('idle');
+  const [micError, setMicError] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const micStreamRef = useRef<MediaStream | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -161,6 +168,12 @@ export function PracticePage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, historyLoading]);
 
+  useEffect(() => {
+    return () => {
+      micStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
   async function send() {
     if (!input.trim() || !token || loading) return;
 
@@ -213,6 +226,77 @@ export function PracticePage() {
       setLoading(false);
       inputRef.current?.focus();
     }
+  }
+
+  async function toggleRecording() {
+    setMicError(null);
+
+    if (micState === 'recording') {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+    if (micState === 'transcribing') return;
+
+    let stream = micStreamRef.current;
+    if (!stream || stream.getTracks().every((t) => t.readyState === 'ended')) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micStreamRef.current = stream;
+      } catch {
+        setMicError('Microphone permission denied');
+        return;
+      }
+    }
+
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm';
+
+    const recorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorderRef.current = recorder;
+    audioChunksRef.current = [];
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
+      audioChunksRef.current = [];
+
+      if (blob.size === 0) {
+        setMicState('idle');
+        setMicError('No audio captured');
+        return;
+      }
+
+      setMicState('transcribing');
+      const form = new FormData();
+      form.append('audio', blob, 'audio.webm');
+
+      try {
+        const res = await fetch('/api/learning/session/transcribe', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token ?? ''}`, 'X-Language': language },
+          body: form,
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Failed');
+        const data = await res.json();
+        console.log('transcribe response:', data);
+        const { text } = data;
+        if (text) {
+          setInput((prev) => (prev ? `${prev} ${text}` : text));
+          inputRef.current?.focus();
+        }
+      } catch (err) {
+        setMicError(err instanceof Error ? err.message : 'Transcription failed');
+      } finally {
+        setMicState('idle');
+      }
+    };
+
+    recorder.start();
+    setMicState('recording');
   }
 
   return (
@@ -305,10 +389,37 @@ export function PracticePage() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send();
           }}
-          disabled={loading || historyLoading || !isAuthorized}
+          disabled={loading || historyLoading || !isAuthorized || micState === 'transcribing'}
           size="small"
           sx={{ '& .MuiOutlinedInput-root': { borderRadius: '20px' } }}
         />
+        <Tooltip
+          title={
+            micState === 'recording'
+              ? 'Tap to stop'
+              : micState === 'transcribing'
+                ? 'Transcribing…'
+                : 'Record voice'
+          }
+          placement="top"
+        >
+          <span>
+            <IconButton
+              color={micState === 'recording' ? 'error' : 'default'}
+              onClick={toggleRecording}
+              disabled={loading || historyLoading || !isAuthorized || micState === 'transcribing'}
+              className={micState === 'recording' ? styles.micButtonRecording : undefined}
+              sx={{ flexShrink: 0 }}
+              aria-label={micState === 'recording' ? 'Stop recording' : 'Start recording'}
+            >
+              {micState === 'transcribing' ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                <MicIcon />
+              )}
+            </IconButton>
+          </span>
+        </Tooltip>
         <IconButton
           color="primary"
           onClick={send}
@@ -318,6 +429,27 @@ export function PracticePage() {
           <SendIcon />
         </IconButton>
       </Box>
+
+      {micError && (
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 'calc(60px + var(--safe-area-bottom) + 64px)',
+            left: 12,
+            right: 12,
+            zIndex: 1200,
+            bgcolor: 'error.main',
+            color: 'error.contrastText',
+            borderRadius: 2,
+            px: 2,
+            py: 1,
+            cursor: 'pointer',
+          }}
+          onClick={() => setMicError(null)}
+        >
+          <Typography variant="caption">{micError}</Typography>
+        </Box>
+      )}
     </Box>
   );
 }
